@@ -9,10 +9,9 @@
 ;; lists are composed of colors of the current visible 
 ;; tiles on the cube looking at it from the front 
 ;; where the top face is white in the finished position 
-;; and the front face is blue. Colors are listed in the
-;; order of top) back) left) front) right) bottom.
+;; and the front face is blue. 
 
-;; c1 is the bottom left cubie) which has no top color
+;; c1 is the bottom left cubie which has no top color
 ;; because the top is not visible (that would be c4))
 ;; the left color is 'r for red and the front color 
 ;; 'b for blue. There is no right color because the
@@ -199,44 +198,44 @@
   (cond 
     [(eq? orientation 'down)
      (cond [(eq? tile-orientation 'top)
-	    (retag 'front)]
+            (retag 'front)]
            [(eq? tile-orientation 'front)
-	    (retag 'bottom)]
+            (retag 'bottom)]
            [(eq? tile-orientation 'bottom)
-	    (retag 'back)]
+            (retag 'back)]
            [(eq? tile-orientation 'back)
-	    (retag 'top)]
-	   [else tile])]
+            (retag 'top)]
+           [else tile])]
     [(eq? orientation 'up)
      (cond [(eq? tile-orientation 'top)
-	    (retag 'back)]
+            (retag 'back)]
            [(eq? tile-orientation 'back)
-	    (retag 'bottom)]
+            (retag 'bottom)]
            [(eq? tile-orientation 'bottom)
-	    (retag 'front)]
+            (retag 'front)]
            [(eq? tile-orientation 'front)
-	    (retag 'top)]
-	   [else tile])]
+            (retag 'top)]
+           [else tile])]
     [(eq? orientation 'left)
      (cond [(eq? tile-orientation 'left)
-	    (retag 'back)]
+            (retag 'back)]
            [(eq? tile-orientation 'back)
-	    (retag 'right)]
+            (retag 'right)]
            [(eq? tile-orientation 'right)
-	    (retag 'front)]
+            (retag 'front)]
            [(eq? tile-orientation 'front)
-	    (retag 'left)]
-	   [else tile])]
+            (retag 'left)]
+           [else tile])]
     [(eq? orientation 'right)
      (cond [(eq? tile-orientation 'left)
-	    (retag 'front)]
+            (retag 'front)]
            [(eq? tile-orientation 'front)
-	    (retag 'right)]
+            (retag 'right)]
            [(eq? tile-orientation 'right)
-	    (retag 'back)]
+            (retag 'back)]
            [(eq? tile-orientation 'back)
-	    (retag 'left)]
-	   [else tile])]
+            (retag 'left)]
+           [else tile])]
     [else raise 'InvalidOrientation]))
 
 (define (reorient-in-cube cube orientation cubie) 
@@ -251,9 +250,9 @@
     cube
     (reorient-tiles 
       (reorient-in-cube 
-	cube 
-	orientation
-	(car to-reorient))
+        cube 
+        orientation
+        (car to-reorient))
       orientation
       (cdr to-reorient))))
 
@@ -400,4 +399,48 @@
       (hash-ref pattern pattern-cubie)))
   (if (andmap check-cubie (hash-keys pattern)) #t #f))
 
-(define cube (create-cube))
+;; ambiguous evaluator from SICP
+;; implementation from http://community.schemewiki.org/?amb
+;; https://mitpress.mit.edu/sicp/full-text/sicp/book/node91.html
+
+(define fail 
+  (λ () 
+    (error "Amb tree exhausted"))) 
+ 
+(define-syntax amb 
+  (syntax-rules () 
+    ((amb) (fail))
+    ((amb expression) expression)
+ 
+    ((amb expression ...)
+     (let ((fail-save fail)) 
+       ((call-with-current-continuation
+          (λ (k-success)
+            (call-with-current-continuation 
+              (λ (k-failure)
+                (set! fail
+                      (λ () (k-failure #f))) 
+                (k-success
+                 (λ ()
+                   expression))))
+            ... 
+            (set! fail fail-save)
+            fail-save)))))))
+ 
+(define (require condition) 
+  (when (not condition) (fail))) 
+
+(define all-rotations (list L Li M Mi R Ri U Ui E Ei D Di S Si F Fi B Bi))
+
+(define random-rotation (list-ref all-rotations (random (length all-rotations))))
+
+;; inline list because we can't use 'apply' here, amb is a macro
+(define solution (let ((f (amb L Li M Mi R Ri U Ui E Ei D Di S Si F Fi B Bi)))
+  (require 
+    (match-cube 
+      (f (create-cube)) 
+      (random-rotation (create-cube))))
+  f))
+
+(display (format "The move to solve the cube is ~a\n" solution))
+
