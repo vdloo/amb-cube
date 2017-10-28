@@ -1,6 +1,9 @@
 #!/usr/bin/env racket
 #lang racket
 
+(define-namespace-anchor a)
+(define ns (namespace-anchor->namespace a))
+
 ;; cubie representation:
 ;; cubie with 3 colors in the list is a corner piece
 ;; cubie with 2 colors in the list is an edge piece
@@ -403,15 +406,15 @@
 ;; implementation from http://community.schemewiki.org/?amb
 ;; https://mitpress.mit.edu/sicp/full-text/sicp/book/node91.html
 
-(define fail 
+(define fail (void))
+(set! fail 
   (λ () 
-    (error "Amb tree exhausted"))) 
+    (error "Amb tree exhausted")))
  
 (define-syntax amb 
   (syntax-rules () 
     ((amb) (fail))
     ((amb expression) expression)
- 
     ((amb expression ...)
      (let ((fail-save fail)) 
        ((call-with-current-continuation
@@ -419,7 +422,7 @@
             (call-with-current-continuation 
               (λ (k-failure)
                 (set! fail
-                      (λ () (k-failure #f))) 
+                  (λ () (k-failure #f))) 
                 (k-success
                  (λ ()
                    expression))))
@@ -430,17 +433,43 @@
 (define (require condition) 
   (when (not condition) (fail))) 
 
+(define (combinations-with-repetitions combi-set k)
+  (cond [(= k 0 ) '(())]
+	[(empty? combi-set) '()]
+	[(append (combinations-with-repetitions (rest combi-set) k)
+		 (map (λ (x) (cons (first combi-set) x))
+		      (combinations-with-repetitions combi-set (- k 1))))]))
+
 (define all-rotations (list L Li M Mi R Ri U Ui E Ei D Di S Si F Fi B Bi))
+
+(define (moves-to-try-n n)
+  (combinations-with-repetitions all-rotations n))
+
+(define moves-to-try (apply append (map moves-to-try-n (range 1 3))))
+
+(define (build-rotations-iter rotations result)
+  (if (false? result) 
+    ; if result is #f return the list of rotations
+    rotations
+    (if (empty? rotations) 
+      result
+      (build-rotations-iter 
+        (cdr rotations) 
+        ((car rotations) result)))))
+
+(define (build-rotations rotations)
+  (λ (cube) (build-rotations-iter rotations cube)))
 
 (define random-rotation (list-ref all-rotations (random (length all-rotations))))
 
+(define rotations-to-try (map build-rotations moves-to-try))
+
 ;; inline list because we can't use 'apply' here, amb is a macro
-(define solution (let ((f (amb L Li M Mi R Ri U Ui E Ei D Di S Si F Fi B Bi)))
+(define solution (let ((f (eval `(amb ,@rotations-to-try) ns)))
   (require 
     (match-cube 
       (f (create-cube)) 
       (random-rotation (create-cube))))
   f))
 
-(display (format "The move to solve the cube is ~a\n" solution))
-
+(display (format "The move to solve the cube is ~a\n" (solution #f)))
