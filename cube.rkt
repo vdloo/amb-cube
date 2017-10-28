@@ -445,11 +445,11 @@
 (define (moves-to-try-n n)
   (combinations-with-repetitions all-rotations n))
 
-(define moves-to-try (apply append (map moves-to-try-n (range 1 3))))
+(define moves-to-try (apply append (map moves-to-try-n (range 0 5))))
 
 (define (build-rotations-iter rotations result)
   (if (false? result) 
-    ; if result is #f return the list of rotations
+    ; if result is False, return the list of rotations
     rotations
     (if (empty? rotations) 
       result
@@ -464,12 +464,38 @@
 
 (define rotations-to-try (map build-rotations moves-to-try))
 
+(define (shuffle-cube-iter cube left)
+  (define move (list-ref all-rotations (random (length all-rotations))))
+  (display "Shuffling with random move")
+  (displayln move)
+  (if (< left 0)
+    cube
+    (shuffle-cube-iter 
+      (move cube)
+      (- left 1))))
+
+(define (shuffle-cube cube)
+  (shuffle-cube-iter cube (random 3)))
+
+(define shuffled-cube (shuffle-cube (create-cube)))
+
+(displayln "The shuffled cube looks like")
+(print-cube shuffled-cube)
+
 ;; inline list because we can't use 'apply' here, amb is a macro
 (define solution (let ((f (eval `(amb ,@rotations-to-try) ns)))
   (require 
+    (begin
+    (display "trying ")
+    (displayln (f #f))
     (match-cube 
-      (f (create-cube)) 
-      (random-rotation (create-cube))))
+      (f shuffled-cube)
+      (create-cube))))
   f))
 
+(displayln "The shuffled cube looks like")
+(print-cube shuffled-cube)
 (display (format "The move to solve the cube is ~a\n" (solution #f)))
+(define solved-cube (solution shuffled-cube))
+(print-cube solved-cube)
+
