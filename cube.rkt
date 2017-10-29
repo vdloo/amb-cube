@@ -493,9 +493,25 @@
       (create-cube))))
   f))
 
+(define (solve-for-pattern unsolved-cube pattern-to-match)
+  ;; inline list because we can't use 'apply' here, amb is a macro
+  (define solution (let ((f (eval `(amb ,@rotations-to-try) ns)))
+    (require 
+      (begin
+      (display "trying ")
+      (displayln (f #f))
+      (match-cube 
+        (f pattern-to-match)
+        unsolved-cube)))
+    f))
+  solution)
+
+(define cube-solution
+  (solve-for-pattern shuffled-cube (create-cube)))
+
 (displayln "The shuffled cube looks like")
 (print-cube shuffled-cube)
-(display (format "The move to solve the cube is ~a\n" (solution #f)))
-(define solved-cube (solution shuffled-cube))
+(display (format "The move to solve the cube is ~a\n" (cube-solution #f)))
+(define solved-cube (cube-solution shuffled-cube))
 (print-cube solved-cube)
 
